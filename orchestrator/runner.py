@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Awaitable, Callable
 
 from agents.competitor_analysis_agent.agent import run_competitor_analysis_agent
@@ -12,6 +13,7 @@ from agents.strategy_agent.agent import run_strategy_agent
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.models import AgentOutput, WorkflowState
+from orchestrator.telemetry import log_event, telemetry_scope
 from workflows.idea_to_strategy import STAGES as IDEA_TO_STRATEGY_STAGES
 from workflows.venture_intelligence import STAGES as VENTURE_INTELLIGENCE_STAGES
 
@@ -49,12 +51,63 @@ class PipelineRunner:
         state.append_event("pipeline_started", {"pipeline_id": pipeline_id})
         self.sessions.save(state)
 
+        stages = self.stages_for(pipeline_id)
+        log_event(
+            "pipeline",
+            "run_pipeline_start",
+            detail={
+                "pipeline_id": pipeline_id,
+                "session_id": state.session_id,
+                "stage_count": len(stages),
+                "stage_names": [s for s, _ in stages],
+            },
+        )
+
         outputs: list[AgentOutput] = []
         prior: dict[str, Any] = {}
-        for stage_name, fn in self.stages_for(pipeline_id):
+        for stage_name, fn in stages:
             state.stage = stage_name
             state.append_event("stage_started", {"stage": stage_name})
-            out = await fn(state, self.sessions, self.vectors, prior)
+            async with telemetry_scope(stage=stage_name):
+                qualname = getattr(fn, "__qualname__", str(fn))
+                mod = getattr(fn, "__module__", "?")
+                log_event(
+                    "pipeline",
+                    "stage_invoke",
+                    detail={
+                        "stage": stage_name,
+                        "callable": f"{mod}.{qualname}",
+                        "prior_keys": list(prior.keys()),
+                    },
+                )
+                t0 = time.perf_counter()
+                try:
+                    out = await fn(state, self.sessions, self.vectors, prior)
+                except Exception as e:
+                    log_event(
+                        "pipeline",
+                        "stage_exception",
+                        level="error",
+                        detail={
+                            "stage": stage_name,
+                            "callable": f"{mod}.{qualname}",
+                            "exc_type": type(e).__name__,
+                            "exc": str(e)[:2000],
+                        },
+                    )
+                    raise
+                dt_ms = round((time.perf_counter() - t0) * 1000, 2)
+                log_event(
+                    "pipeline",
+                    "stage_return",
+                    detail={
+                        "stage": stage_name,
+                        "agent": out.agent_name,
+                        "duration_ms": dt_ms,
+                        "summary_chars": len(out.summary or ""),
+                        "structured_keys": list((out.structured or {}).keys())[:40],
+                    },
+                )
             prior[stage_name] = out.structured
             outputs.append(out)
             state.append_event(
@@ -66,6 +119,11 @@ class PipelineRunner:
         state.stage = "completed"
         state.append_event("pipeline_completed", {"pipeline_id": pipeline_id})
         self.sessions.save(state)
+        log_event(
+            "pipeline",
+            "run_pipeline_complete",
+            detail={"pipeline_id": pipeline_id, "session_id": state.session_id, "agents_run": len(outputs)},
+        )
         return outputs
 
 

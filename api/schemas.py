@@ -18,3 +18,7 @@ class RunResponse(BaseModel):
     pipeline_id: str
     route_reason: str
     outputs: list[dict[str, Any]]
+
+
+class RunAsyncAccepted(BaseModel):
+    job_id: str

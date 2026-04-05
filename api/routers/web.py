@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.registry import AGENTS
-from api.database import get_db
+from api.database import async_session_maker, get_db
+from api.jobs_store import create_job, get_job, update_job
 from api.paths import TEMPLATES_DIR
 from api.repo import count_reports, count_sessions, delete_session, get_session_by_id, list_recent_sessions
-from api.schemas import RunRequest, RunResponse
+from api.schemas import RunAsyncAccepted, RunRequest, RunResponse
 from api.run_service import run_venture_workflow
 from memory.session_store import SessionStore
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
+from orchestrator.telemetry import get_events, log_event
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -146,3 +149,70 @@ async def api_run(
         db=db,
     )
     return RunResponse(**payload)
+
+
+@router.get("/api/activity")
+async def api_activity(
+    since_id: int = 0,
+    limit: int = 400,
+    job_id: str | None = None,
+) -> dict[str, Any]:
+    return {"events": get_events(since_id=since_id, limit=limit, job_id=job_id)}
+
+
+@router.get("/api/jobs/{job_id}")
+async def api_job_status(job_id: str) -> dict[str, Any]:
+    row = get_job(job_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Unknown job_id")
+    return {"job_id": job_id, **row}
+
+
+@router.post("/api/run/async", response_model=RunAsyncAccepted)
+async def api_run_async(req: RunRequest, request: Request) -> RunAsyncAccepted:
+    job_id = create_job()
+    runner = _runner(request)
+    mem = _memory_sessions(request)
+    log_event(
+        "api",
+        "run_async_accepted",
+        detail={"job_id": job_id, "goal_chars": len(req.goal), "pipeline": req.pipeline},
+    )
+
+    async def work() -> None:
+        update_job(job_id, status="running")
+        log_event("job", "worker_started", detail={"job_id": job_id})
+        try:
+            async with async_session_maker() as db:
+                payload = await run_venture_workflow(
+                    goal=req.goal,
+                    pipeline=req.pipeline,
+                    runner=runner,
+                    memory_sessions=mem,
+                    db=db,
+                    job_id=job_id,
+                )
+                await db.commit()
+            update_job(
+                job_id,
+                status="completed",
+                session_id=payload["session_id"],
+                pipeline_id=payload["pipeline_id"],
+                route_reason=payload["route_reason"],
+            )
+            log_event(
+                "job",
+                "worker_finished",
+                detail={"job_id": job_id, "session_id": payload["session_id"]},
+            )
+        except Exception as e:
+            update_job(job_id, status="failed", error=str(e))
+            log_event(
+                "job",
+                "worker_failed",
+                level="error",
+                detail={"job_id": job_id, "exc_type": type(e).__name__, "error": str(e)[:2000]},
+            )
+
+    asyncio.create_task(work())
+    return RunAsyncAccepted(job_id=job_id)

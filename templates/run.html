@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Run workflow</h1>
-<p class="lead">Describe what you are building or exploring. Agents will run in sequence and save a full report to your local database.</p>
+<p class="lead">Describe what you are building or exploring. Agents run in the background so you can watch the technical activity log update in real time.</p>
 
 <form id="run-form" class="card form-card">
   <label for="goal">Your goal</label>
@@ -21,22 +21,59 @@
   </div>
 </form>
 
-<p class="muted small">Runs may take longer when <code>OPENAI_API_KEY</code> is set (live LLM). Otherwise demo mode returns instantly.</p>
+<section class="card activity-section" id="run-log-section" hidden>
+  <div class="activity-head">
+    <h2>Execution log (this run)</h2>
+    <span class="muted small" id="run-job-meta"></span>
+  </div>
+  <pre class="activity-log" id="live-log" aria-live="polite"></pre>
+</section>
+
+<p class="muted small">Uses <code>POST /api/run/async</code> + job polling. Sync API remains <code>POST /api/run</code> for scripts.</p>
 
 <script>
 (function () {
   const form = document.getElementById("run-form");
   const btn = document.getElementById("submit-btn");
   const status = document.getElementById("run-status");
+  const logSection = document.getElementById("run-log-section");
+  const liveLog = document.getElementById("live-log");
+  const jobMeta = document.getElementById("run-job-meta");
+  let pollTimer = null;
+  let lastId = 0;
+  const lines = [];
+
+  function fmt(e) {
+    var det = "";
+    try {
+      if (e.detail && Object.keys(e.detail).length) {
+        det = " | " + JSON.stringify(e.detail);
+      }
+    } catch (x) { det = ""; }
+    var stg = e.stage ? " stage=" + e.stage : "";
+    return "[" + e.id + "] " + e.ts + " " + String(e.level || "info").toUpperCase() + " " + e.source + " | " + e.message + stg + det;
+  }
+
+  function stopPoll() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
     const goal = document.getElementById("goal").value.trim();
     const pipeline = document.getElementById("pipeline").value;
     if (!goal) return;
+    stopPoll();
     btn.disabled = true;
-    status.textContent = "Running agents…";
+    status.textContent = "Starting job…";
+    lines.length = 0;
+    lastId = 0;
+    liveLog.textContent = "";
+    logSection.hidden = false;
+
     try {
-      const res = await fetch("/api/run", {
+      const res = await fetch("/api/run/async", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ goal: goal, pipeline: pipeline || null }),
@@ -47,7 +84,53 @@
         btn.disabled = false;
         return;
       }
-      window.location.href = "/dashboard/sessions/" + encodeURIComponent(data.session_id);
+      const jobId = data.job_id;
+      jobMeta.textContent = "job_id=" + jobId;
+      status.textContent = "Running…";
+
+      async function pollActivity() {
+        try {
+          const ar = await fetch("/api/activity?job_id=" + encodeURIComponent(jobId) + "&since_id=" + lastId + "&limit=500");
+          const ad = await ar.json();
+          if (ad.events && ad.events.length) {
+            for (var i = 0; i < ad.events.length; i++) {
+              var ev = ad.events[i];
+              lines.push(fmt(ev));
+              if (ev.id > lastId) lastId = ev.id;
+            }
+            liveLog.textContent = lines.join("\n");
+            liveLog.scrollTop = liveLog.scrollHeight;
+          }
+        } catch (x) { /* ignore */ }
+      }
+
+      async function pollJob() {
+        try {
+          const jr = await fetch("/api/jobs/" + encodeURIComponent(jobId));
+          const jd = await jr.json();
+          if (jd.status === "completed" && jd.session_id) {
+            stopPoll();
+            await pollActivity();
+            status.textContent = "Done — opening session…";
+            window.location.href = "/dashboard/sessions/" + encodeURIComponent(jd.session_id);
+            return;
+          }
+          if (jd.status === "failed") {
+            stopPoll();
+            await pollActivity();
+            status.textContent = "Failed: " + (jd.error || "unknown");
+            btn.disabled = false;
+            return;
+          }
+        } catch (x) { /* ignore */ }
+      }
+
+      pollTimer = setInterval(function () {
+        pollActivity();
+        pollJob();
+      }, 400);
+      pollActivity();
+      pollJob();
     } catch (err) {
       status.textContent = "Network error";
       btn.disabled = false;

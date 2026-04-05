@@ -9,6 +9,7 @@ from memory.session_store import SessionStore
 from orchestrator.models import WorkflowState
 from orchestrator.router import route_user_goal
 from orchestrator.runner import PipelineRunner
+from orchestrator.telemetry import log_event, telemetry_scope
 
 
 async def run_venture_workflow(
@@ -18,16 +19,34 @@ async def run_venture_workflow(
     runner: PipelineRunner,
     memory_sessions: SessionStore,
     db: AsyncSession,
+    job_id: str | None = None,
 ) -> dict[str, Any]:
     decision = route_user_goal(goal) if not pipeline else None
     pipeline_id = pipeline or (decision.pipeline_id if decision else "idea-to-strategy")
     reason = decision.reason if decision else "client-selected pipeline"
 
     state = WorkflowState(user_goal=goal)
-    memory_sessions.save(state)
-    outputs = await runner.run_pipeline(state, pipeline_id)
-    stages = [s for s, _ in runner.stages_for(pipeline_id)]
-    await save_workflow_result(db, state, reason, outputs, stages)
+    async with telemetry_scope(job_id=job_id, session_id=state.session_id, pipeline_id=pipeline_id):
+        log_event(
+            "workflow",
+            "dispatch",
+            detail={
+                "pipeline_id": pipeline_id,
+                "route_reason": reason,
+                "goal_chars": len(goal),
+                "explicit_pipeline": pipeline is not None,
+            },
+        )
+        memory_sessions.save(state)
+        outputs = await runner.run_pipeline(state, pipeline_id)
+        stages = [s for s, _ in runner.stages_for(pipeline_id)]
+        log_event(
+            "workflow",
+            "sqlite_persist_start",
+            detail={"session_id": state.session_id, "report_rows": len(outputs)},
+        )
+        await save_workflow_result(db, state, reason, outputs, stages)
+        log_event("workflow", "sqlite_persist_done", detail={"session_id": state.session_id})
 
     return {
         "session_id": state.session_id,

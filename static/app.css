@@ -278,3 +278,28 @@ h2 {
 .timeline li { margin: 0.35rem 0; }
 
 .danger-zone { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border); }
+
+.activity-section { margin-top: 2rem; }
+.activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.activity-head h2 { margin: 0; }
+.activity-log {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 1rem;
+  max-height: 22rem;
+  overflow: auto;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -12,6 +12,7 @@ from memory.agent_memory import AgentMemory
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.models import AgentOutput, WorkflowState
+from orchestrator.telemetry import log_event
 
 UserMessageFn = Callable[[dict[str, Any]], str]
 DemoFactory = dict[str, Any] | Callable[[], dict[str, Any]]
@@ -29,6 +30,16 @@ async def run_harnessed_turn(
     vector_doc_suffix: str,
 ) -> AgentOutput:
     spec = load_harness_spec(harness_dir / "harness.yaml")
+    log_event(
+        "harness",
+        "spec_loaded",
+        detail={
+            "agent_id": spec.agent_id,
+            "prompt_name": spec.prompt_name,
+            "skill_count": len(spec.skill_bindings),
+            "rules_file": spec.rules_file,
+        },
+    )
     rules_path = harness_dir / spec.rules_file
     rules_text = rules_path.read_text(encoding="utf-8") if rules_path.is_file() else ""
 
@@ -36,6 +47,11 @@ async def run_harnessed_turn(
     skill_outputs: dict[str, Any] = {}
     for binding in spec.skill_bindings:
         fn = resolve_callable(binding.callable)
+        log_event(
+            "harness.skill",
+            "invoke",
+            detail={"agent_id": spec.agent_id, "skill": binding.name, "callable": binding.callable},
+        )
         skill_outputs[binding.name] = run_skill(
             fn,
             goal=state.user_goal,
@@ -45,6 +61,15 @@ async def run_harnessed_turn(
 
     memory = AgentMemory(spec.agent_id, state.session_id, vectors)
     recall_txt = memory.recall_snippets(state.user_goal, k=spec.memory.recall_top_k)
+    log_event(
+        "harness.memory",
+        "recall",
+        detail={
+            "agent_id": spec.agent_id,
+            "recall_top_k": spec.memory.recall_top_k,
+            "recall_chars": len(recall_txt),
+        },
+    )
 
     user_ctx: dict[str, Any] = {
         "goal": state.user_goal,
@@ -71,12 +96,26 @@ async def run_harnessed_turn(
     )
     extra_system = "\n".join(extra_parts)
 
+    log_event(
+        "harness",
+        "llm_turn_start",
+        detail={
+            "agent_id": spec.agent_id,
+            "user_message_chars": len(user_message),
+            "extra_system_chars": len(extra_system),
+        },
+    )
     data, raw = await run_json_agent(
         agent_name=spec.agent_id,
         prompt_name=spec.prompt_name,
         user_message=user_message,
         demo_factory=demo_factory,
         extra_system=extra_system,
+    )
+    log_event(
+        "harness",
+        "llm_turn_done",
+        detail={"agent_id": spec.agent_id, "structured_keys": list(data.keys())[:30]},
     )
 
     memory.remember(

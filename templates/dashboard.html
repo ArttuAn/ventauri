@@ -23,6 +23,15 @@
   <a class="btn" href="/dashboard/agents">Browse agents</a>
 </div>
 
+<section class="section card activity-section">
+  <div class="activity-head">
+    <h2>System activity log</h2>
+    <span class="muted small" id="activity-status">Live · polling</span>
+  </div>
+  <p class="muted small">Technical trace: pipeline stages, harness skills, SQLite, and LLM HTTP (when enabled). Max ~2000 events in memory.</p>
+  <pre class="activity-log" id="activity-log" aria-live="polite"></pre>
+</section>
+
 <section class="section">
   <h2>Recent runs</h2>
   {% if recent %}
@@ -38,4 +47,51 @@
   <p class="muted">No runs yet. <a href="/dashboard/run">Run your first workflow</a>.</p>
   {% endif %}
 </section>
+
+<script>
+(function () {
+  const el = document.getElementById("activity-log");
+  const st = document.getElementById("activity-status");
+  let lastId = 0;
+  const maxLines = 400;
+  const lines = [];
+
+  function fmt(e) {
+    var det = "";
+    try {
+      if (e.detail && Object.keys(e.detail).length) {
+        det = " | " + JSON.stringify(e.detail);
+      }
+    } catch (x) { det = ""; }
+    var job = e.job_id ? " job=" + e.job_id.slice(0, 8) : "";
+    var sess = e.session_id ? " sess=" + e.session_id.slice(0, 8) : "";
+    var stg = e.stage ? " stage=" + e.stage : "";
+    return "[" + e.id + "] " + e.ts + " " + String(e.level || "info").toUpperCase() + " " + e.source + " | " + e.message + job + sess + stg + det;
+  }
+
+  async function tick() {
+    try {
+      const res = await fetch("/api/activity?since_id=" + lastId + "&limit=500");
+      const data = await res.json();
+      if (!data.events || !data.events.length) {
+        st.textContent = "Live · polling (idle)";
+        return;
+      }
+      for (var i = 0; i < data.events.length; i++) {
+        var e = data.events[i];
+        lines.push(fmt(e));
+        if (e.id > lastId) lastId = e.id;
+      }
+      while (lines.length > maxLines) lines.shift();
+      el.textContent = lines.join("\n");
+      el.scrollTop = el.scrollHeight;
+      st.textContent = "Live · last event id " + lastId;
+    } catch (err) {
+      st.textContent = "Poll error";
+    }
+  }
+  tick();
+  setInterval(tick, 1500);
+})();
+</script>
 {% endblock %}
