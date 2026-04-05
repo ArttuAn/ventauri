@@ -1,0 +1,12 @@
+default_pipeline: idea-to-strategy
+
+orchestrator:
+  max_retries: 2
+  priority: balanced
+
+memory:
+  vector_dim: 96
+
+api:
+  host: "0.0.0.0"
+  port: 8000
