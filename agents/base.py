@@ -16,7 +16,7 @@ async def run_json_agent(
     user_message: str,
     demo_factory: dict[str, Any] | Callable[[], dict[str, Any]],
 ) -> tuple[dict[str, Any], str]:
-    system = load_prompt(prompt_name) or f"You are the {agent_name} for FounderOS. Respond with JSON only."
+    system = load_prompt(prompt_name) or f"You are the {agent_name} for Ventauri. Respond with JSON only."
     settings = get_settings()
     if settings.llm_enabled:
         raw = await complete_chat(system, user_message)

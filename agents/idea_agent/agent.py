@@ -7,6 +7,7 @@ from agents.base import build_output, run_json_agent
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.models import AgentOutput, WorkflowState
+from skills.branding_tools.naming import generate_name_candidates
 from skills.web_tools.search import web_search_stub
 
 
@@ -37,7 +38,7 @@ def _demo_ideas(goal: str) -> dict[str, Any]:
                 "market_size_guess": "Growing",
                 "feasibility": "High",
                 "competition": "High; win on workflow depth",
-                "rationale": "Aligns with FounderOS thesis; fast iteration loops.",
+                "rationale": "Aligns with Ventauri multi-agent thesis; fast iteration loops.",
             },
         ],
         "clusters": ["Automation", "Compliance / data", "GTM tooling"],
@@ -56,7 +57,8 @@ async def run_idea_agent(
         f"Founder goal:\n{state.user_goal}\n\n"
         "Return JSON with keys: summary (string), ideas (array of objects with "
         "title, score 0-1, market_size_guess, feasibility, competition, rationale), "
-        "clusters (string array). Optionally web_signals (object) if you infer from goal."
+        "clusters (string array). Optionally web_signals (object) if you infer from goal. "
+        "Optionally naming_suggestions (array of {name, slug, rationale}) for product/repo names."
     )
     data, raw = await run_json_agent(
         agent_name="idea",
@@ -64,6 +66,8 @@ async def run_idea_agent(
         user_message=user_message,
         demo_factory=lambda: _demo_ideas(state.user_goal),
     )
+    if not data.get("naming_suggestions"):
+        data["naming_suggestions"] = generate_name_candidates(state.user_goal, count=5)
     out = build_output("idea", data, raw)
     vectors.add(
         f"{state.session_id}:idea",

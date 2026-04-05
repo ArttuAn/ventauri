@@ -1,1 +1,1 @@
-"""Typer CLI for FounderOS."""
+"""Typer CLI for Ventauri."""

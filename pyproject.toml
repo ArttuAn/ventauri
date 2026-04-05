@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "founder-os"
+name = "ventauri"
 version = "0.1.0"
-description = "Multi-Agent AI Operating System for Entrepreneurs"
+description = "Ventauri — multi-agent AI operating system for entrepreneurs"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "FounderOS Contributors" }]
+authors = [{ name = "Ventauri Contributors" }]
 keywords = ["ai", "agents", "orchestration", "startup", "entrepreneur"]
 dependencies = [
     "fastapi>=0.115.0",
@@ -31,7 +31,7 @@ dev = [
 openai = ["openai>=1.55.0"]
 
 [project.scripts]
-founderos = "cli.main:main"
+ventauri = "cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

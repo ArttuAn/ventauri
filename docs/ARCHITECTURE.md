@@ -1,4 +1,4 @@
-# FounderOS — Architecture
+# Ventauri — Architecture
 
 ## Core concept
 
@@ -44,7 +44,7 @@ Specialized agents coordinated by an **orchestrator**, backed by:
 
 ### 4. Skills / tooling
 
-Pluggable capabilities: `web_search`, scrapers, simulators, `vector_store_query`, `document_writer`, etc. Implemented under `skills/` with clear interfaces.
+Pluggable capabilities: `web_search`, scrapers, simulators, `vector_store_query`, `document_writer`, **brand naming** (`skills/branding_tools`, distinctiveness heuristics + candidate lists), etc. Implemented under `skills/` with clear interfaces.
 
 ### 5. Agent communication (options)
 

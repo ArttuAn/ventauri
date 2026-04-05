@@ -1,1 +1,1 @@
-"""FastAPI surface for FounderOS."""
+"""FastAPI surface for Ventauri."""

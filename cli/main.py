@@ -11,8 +11,9 @@ from memory.vector_store import VectorStore
 from orchestrator.models import WorkflowState
 from orchestrator.router import route_user_goal
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
+from skills.branding_tools.naming import generate_name_candidates
 
-app = typer.Typer(no_args_is_help=True, help="FounderOS — multi-agent founder workflows")
+app = typer.Typer(no_args_is_help=True, help="Ventauri — multi-agent founder workflows")
 
 
 @app.command("run")
@@ -73,6 +74,22 @@ def pipelines_cmd() -> None:
     """List registered pipelines and stages."""
     for pid, stages in PIPELINE_STAGE_IDS.items():
         typer.echo(f"{pid}: {', '.join(stages)}")
+
+
+@app.command("names")
+def names_cmd(
+    seed: str = typer.Argument(..., help="Vision, product type, or keywords to inspire names"),
+    count: int = typer.Option(12, "--count", "-n", help="How many candidates"),
+    json_out: bool = typer.Option(False, "--json", help="Print machine-readable JSON"),
+) -> None:
+    """Suggest distinctive name candidates (verify GitHub/npm/domain yourself)."""
+    rows = generate_name_candidates(seed, count=count)
+    if json_out:
+        typer.echo(json.dumps(rows, indent=2, ensure_ascii=False))
+        return
+    for row in rows:
+        typer.echo(f"{row['name']}  (slug: {row['slug']}, score: {row['distinctiveness']})")
+        typer.echo(f"  {row['rationale']}")
 
 
 def main() -> None:

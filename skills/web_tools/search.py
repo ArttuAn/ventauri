@@ -11,5 +11,5 @@ def web_search_stub(query: str) -> dict[str, Any]:
             "Buyers consolidating tools; willingness to pay rises with measurable ROI.",
             "Vertical SaaS outperforming horizontal in 12-18 month CAC payback.",
         ],
-        "sources": ["stub://founderos.demo/news", "stub://founderos.demo/report"],
+        "sources": ["stub://ventauri.demo/news", "stub://ventauri.demo/report"],
     }

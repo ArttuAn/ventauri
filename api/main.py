@@ -12,9 +12,9 @@ from orchestrator.router import route_user_goal
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
 
 app = FastAPI(
-    title="FounderOS API",
+    title="Ventauri API",
     version="0.1.0",
-    description="Multi-agent orchestration for founder workflows",
+    description="Multi-agent orchestration for founder workflows (Ventauri)",
 )
 
 _sessions = SessionStore()

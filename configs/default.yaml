@@ -1,5 +1,9 @@
 default_pipeline: idea-to-strategy
 
+product:
+  name: Ventauri
+  cli_command: ventauri
+
 orchestrator:
   max_retries: 2
   priority: balanced
