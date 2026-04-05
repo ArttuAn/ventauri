@@ -9,9 +9,10 @@ This repository is a **framework and reference implementation**, not a single ch
 ## MVP (this release)
 
 - **Orchestrator**: routes goals, runs staged workflows, keeps session state
-- **Agents**: **Idea**, **Research**, **Strategy** (more agent slots are reserved in the tree for expansion)
+- **Agents**: **Venture intelligence** harnessed agents (**Compliance**, **Market research**, **Competitor analysis**, **Product development**) plus **Idea → Research → Strategy** pipeline; more slots stubbed in-repo
 - **Memory**: session store + lightweight semantic vector store (embeddings optional via OpenAI)
-- **Interfaces**: **CLI** (`ventauri`) and minimal **FastAPI** service
+- **Interfaces**: **Web dashboard** (local UI), **CLI** (`ventauri`), **FastAPI** + OpenAPI
+- **Storage**: **SQLite** at `data/ventauri.db` (workflow runs, per-agent reports, workflow event log)
 - **Naming skill**: `skills/branding_tools` generates candidate product/repo names (heuristic distinctiveness + next-step checks); exposed on the CLI as `ventauri names`
 
 ## Architecture (high level)
@@ -39,10 +40,12 @@ pip install -e .
 # CLI
 ventauri --help
 ventauri run "I want a B2B SaaS for small clinics" --pipeline idea-to-strategy
+ventauri run "HIPAA-compliant CRM: competitors and MVP" --pipeline venture-intelligence
 ventauri names "AI copilot for indie hackers" --count 8
 
-# API
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+# Web dashboard + API (same server)
+uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+# Then open http://127.0.0.1:8000/dashboard
 ```
 
 ### Environment
@@ -59,7 +62,10 @@ skills/           # web_tools, data_tools, writing_tools, analytics_tools, brand
 workflows/        # Declarative stage graphs
 prompts/          # Agent system / task prompts
 configs/          # YAML defaults
-api/              # FastAPI app
+api/              # FastAPI app, DB layer, dashboard routes
+templates/        # Jinja2 dashboard pages
+static/           # Dashboard CSS
+data/             # Local SQLite (gitignored except .gitkeep)
 cli/              # Typer CLI
 ```
 

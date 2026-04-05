@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="lead">Manage AI agents that support your venture: run workflows, review agent reports, and browse history.</p>
+
+<div class="stats">
+  <div class="stat card">
+    <span class="stat-value">{{ session_count }}</span>
+    <span class="stat-label">Workflow runs stored</span>
+  </div>
+  <div class="stat card">
+    <span class="stat-value">{{ report_count }}</span>
+    <span class="stat-label">Agent reports</span>
+  </div>
+  <div class="stat card">
+    <span class="stat-value">{{ pipelines | length }}</span>
+    <span class="stat-label">Pipelines</span>
+  </div>
+</div>
+
+<div class="actions">
+  <a class="btn primary" href="/dashboard/run">Start a workflow</a>
+  <a class="btn" href="/dashboard/agents">Browse agents</a>
+</div>
+
+<section class="section">
+  <h2>Recent runs</h2>
+  {% if recent %}
+  <ul class="list">
+    {% for s in recent %}
+    <li>
+      <a href="/dashboard/sessions/{{ s.id }}">{{ s.user_goal[:100] }}{% if s.user_goal|length > 100 %}…{% endif %}</a>
+      <span class="muted small">{{ s.pipeline_id }} · {{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "" }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No runs yet. <a href="/dashboard/run">Run your first workflow</a>.</p>
+  {% endif %}
+</section>
+{% endblock %}

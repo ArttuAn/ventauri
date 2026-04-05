@@ -1,40 +1,46 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.database import get_db, init_db
+from api.paths import STATIC_DIR
+from api.routers import web as web_router
+from api.schemas import RunRequest, RunResponse
+from api.run_service import run_venture_workflow
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
-from orchestrator.models import WorkflowState
-from orchestrator.router import route_user_goal
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    app.state.memory_sessions = SessionStore()
+    app.state.vectors = VectorStore()
+    app.state.runner = PipelineRunner(app.state.memory_sessions, app.state.vectors)
+    yield
+
 
 app = FastAPI(
     title="Ventauri API",
     version="0.1.0",
     description="Multi-agent orchestration for founder workflows (Ventauri)",
+    lifespan=lifespan,
 )
 
-_sessions = SessionStore()
-_vectors = VectorStore()
-_runner = PipelineRunner(_sessions, _vectors)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.include_router(web_router.router)
 
 
-class RunRequest(BaseModel):
-    goal: str
-    pipeline: str | None = Field(
-        default=None,
-        description="Pipeline id, e.g. idea-to-strategy. Auto-routed when omitted.",
-    )
-
-
-class RunResponse(BaseModel):
-    session_id: str
-    pipeline_id: str
-    route_reason: str
-    outputs: list[dict[str, Any]]
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard", status_code=307)
 
 
 @app.get("/health")
@@ -48,24 +54,16 @@ def pipelines() -> dict[str, list[str]]:
 
 
 @app.post("/run", response_model=RunResponse)
-async def run_pipeline(req: RunRequest) -> RunResponse:
-    decision = route_user_goal(req.goal) if not req.pipeline else None
-    pipeline_id = req.pipeline or (decision.pipeline_id if decision else "idea-to-strategy")
-    reason = decision.reason if decision else "client-selected pipeline"
-
-    state = WorkflowState(user_goal=req.goal)
-    _sessions.save(state)
-    outs = await _runner.run_pipeline(state, pipeline_id)
-    return RunResponse(
-        session_id=state.session_id,
-        pipeline_id=pipeline_id,
-        route_reason=reason,
-        outputs=[
-            {
-                "agent": o.agent_name,
-                "summary": o.summary,
-                "structured": o.structured,
-            }
-            for o in outs
-        ],
+async def run_pipeline_json(
+    req: RunRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> RunResponse:
+    payload = await run_venture_workflow(
+        goal=req.goal,
+        pipeline=req.pipeline,
+        runner=request.app.state.runner,
+        memory_sessions=request.app.state.memory_sessions,
+        db=db,
     )
+    return RunResponse(**payload)

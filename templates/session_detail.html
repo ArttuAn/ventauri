@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="back"><a href="/dashboard/sessions">&larr; All sessions</a></p>
+
+<h1>Workflow session</h1>
+<p class="goal-text">{{ session.user_goal }}</p>
+
+<div class="meta card">
+  <p><strong>Pipeline</strong> <code>{{ session.pipeline_id }}</code></p>
+  <p><strong>Routing</strong> {{ session.route_reason }}</p>
+  <p><strong>Status</strong> {{ session.status }} / stage {{ session.stage }}</p>
+  <p class="muted small">{{ session.created_at.strftime("%Y-%m-%d %H:%M UTC") if session.created_at else "" }}</p>
+</div>
+
+<h2>Agent reports</h2>
+{% set reps = session.reports | sort(attribute='position') %}
+{% for r in reps %}
+<section class="report card" id="report-{{ r.id }}">
+  <header class="report-head">
+    <span class="agent-icon">{{ r.agent_name | upper }}</span>
+    <h3>{{ r.stage }} - {{ r.agent_name }}</h3>
+  </header>
+  <p class="summary">{{ r.summary }}</p>
+  <details class="json-details">
+    <summary>Structured output (JSON)</summary>
+    <pre class="json-block">{{ r.structured | tojson(indent=2) }}</pre>
+  </details>
+</section>
+{% endfor %}
+
+{% if session.history_json %}
+<h2>Workflow log</h2>
+<div class="card">
+  <ol class="timeline">
+    {% for ev in session.history_json %}
+    <li><code>{{ ev.kind }}</code> {% if ev.at %}<span class="muted small">{{ ev.at }}</span>{% endif %}
+      {% if ev.stage %} — stage <strong>{{ ev.stage }}</strong>{% endif %}
+      {% if ev.agent %} — <strong>{{ ev.agent }}</strong>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+{% endif %}
+
+<form method="post" action="/dashboard/sessions/{{ session.id }}/delete" class="danger-zone" onsubmit="return confirm('Delete this session and all agent reports?');">
+  <button type="submit" class="btn danger">Delete session</button>
+</form>
+{% endblock %}

@@ -37,8 +37,9 @@ Thumbs.db
 .env.local
 *.pem
 
-# Data / local stores
-data/
+# Data / local stores (keep folder, ignore DB files)
+data/*
+!data/.gitkeep
 *.sqlite3
 .chroma/
 

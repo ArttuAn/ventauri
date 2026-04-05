@@ -1,0 +1,15 @@
+agent_id: compliance
+display_title: Law & regulation compliance
+prompt_name: compliance_agent
+rules_file: rules.md
+memory:
+  recall_top_k: 5
+skill_bindings:
+  - name: regulatory_scan
+    callable: skills.compliance_tools.stubs.regulatory_scan_stub
+  - name: obligation_matrix
+    callable: skills.compliance_tools.stubs.obligation_matrix_stub
+harness_instructions: |
+  You are not a lawyer. Every output must include explicit disclaimers.
+  Structure findings as hypotheses and diligence questions, not legal conclusions.
+  Cite which skill outputs you relied on inside the JSON (field: evidence_from_skills).

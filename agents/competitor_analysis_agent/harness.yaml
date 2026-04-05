@@ -1,0 +1,14 @@
+agent_id: competitor_analysis
+display_title: Competitor analysis
+prompt_name: competitor_analysis_agent
+rules_file: rules.md
+memory:
+  recall_top_k: 5
+skill_bindings:
+  - name: peer_landscape
+    callable: skills.competitor_tools.stubs.peer_landscape_stub
+  - name: differentiation_grid
+    callable: skills.competitor_tools.stubs.differentiation_grid_stub
+harness_instructions: |
+  Do not claim confidential facts about specific companies unless provided in inputs.
+  Frame competitors as archetypes plus publicly inferable positioning.

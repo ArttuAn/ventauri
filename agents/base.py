@@ -15,8 +15,11 @@ async def run_json_agent(
     prompt_name: str,
     user_message: str,
     demo_factory: dict[str, Any] | Callable[[], dict[str, Any]],
+    extra_system: str = "",
 ) -> tuple[dict[str, Any], str]:
     system = load_prompt(prompt_name) or f"You are the {agent_name} for Ventauri. Respond with JSON only."
+    if extra_system.strip():
+        system = f"{system}\n\n{extra_system.strip()}"
     settings = get_settings()
     if settings.llm_enabled:
         raw = await complete_chat(system, user_message)
@@ -29,7 +32,14 @@ async def run_json_agent(
 
 
 def build_output(agent_name: str, data: dict[str, Any], raw: str) -> AgentOutput:
-    summary = data.get("summary") or data.get("recommended_focus") or data.get("market_notes") or ""
+    summary = (
+        data.get("summary")
+        or data.get("executive_summary")
+        or data.get("recommended_focus")
+        or data.get("market_notes")
+        or data.get("compliance_posture")
+        or ""
+    )
     if isinstance(summary, list):
         summary = "; ".join(str(x) for x in summary[:3])
     summary = str(summary)[:500]

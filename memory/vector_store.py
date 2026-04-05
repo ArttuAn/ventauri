@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -47,5 +48,16 @@ class VectorStore:
     def search(self, query: str, k: int = 5) -> list[tuple[float, VectorRecord]]:
         q = _cheap_embedding(query, self.dim)
         scored = [(_cosine(q, r.vector), r) for r in self._records]
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return scored[:k]
+
+    def search_filtered(
+        self,
+        query: str,
+        k: int,
+        match: Callable[[VectorRecord], bool],
+    ) -> list[tuple[float, VectorRecord]]:
+        q = _cheap_embedding(query, self.dim)
+        scored = [(_cosine(q, r.vector), r) for r in self._records if match(r)]
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored[:k]

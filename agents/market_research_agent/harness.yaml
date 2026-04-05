@@ -1,0 +1,16 @@
+agent_id: market_research
+display_title: Market research
+prompt_name: market_research_agent
+rules_file: rules.md
+memory:
+  recall_top_k: 5
+skill_bindings:
+  - name: sizing
+    callable: skills.market_research_tools.stubs.sizing_stub
+  - name: segments
+    callable: skills.market_research_tools.stubs.segment_map_stub
+  - name: trends
+    callable: skills.market_research_tools.stubs.trend_pulse_stub
+harness_instructions: |
+  Separate facts from hypotheses. Label numbers as unverified unless sourced.
+  Tie segments to the founder goal and any compliance hooks from prior stages when present.

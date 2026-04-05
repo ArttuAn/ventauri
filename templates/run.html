@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Run workflow</h1>
+<p class="lead">Describe what you are building or exploring. Agents will run in sequence and save a full report to your local database.</p>
+
+<form id="run-form" class="card form-card">
+  <label for="goal">Your goal</label>
+  <textarea id="goal" name="goal" rows="5" required placeholder="e.g. B2B SaaS for independent veterinary clinics in the EU…"></textarea>
+
+  <label for="pipeline">Pipeline</label>
+  <select id="pipeline" name="pipeline">
+    <option value="">Auto-route (recommended)</option>
+    {% for pid, stages in pipelines.items() %}
+    <option value="{{ pid }}">{{ pid }} ({{ stages | join(", ") }})</option>
+    {% endfor %}
+  </select>
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary" id="submit-btn">Run agents</button>
+    <span id="run-status" class="muted" aria-live="polite"></span>
+  </div>
+</form>
+
+<p class="muted small">Runs may take longer when <code>OPENAI_API_KEY</code> is set (live LLM). Otherwise demo mode returns instantly.</p>
+
+<script>
+(function () {
+  const form = document.getElementById("run-form");
+  const btn = document.getElementById("submit-btn");
+  const status = document.getElementById("run-status");
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const goal = document.getElementById("goal").value.trim();
+    const pipeline = document.getElementById("pipeline").value;
+    if (!goal) return;
+    btn.disabled = true;
+    status.textContent = "Running agents…";
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: goal, pipeline: pipeline || null }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (!res.ok) {
+        status.textContent = (data && data.detail) ? String(data.detail) : "Request failed (" + res.status + ")";
+        btn.disabled = false;
+        return;
+      }
+      window.location.href = "/dashboard/sessions/" + encodeURIComponent(data.session_id);
+    } catch (err) {
+      status.textContent = "Network error";
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

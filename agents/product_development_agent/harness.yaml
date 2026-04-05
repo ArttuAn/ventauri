@@ -1,0 +1,16 @@
+agent_id: product_development
+display_title: Product development
+prompt_name: product_development_agent
+rules_file: rules.md
+memory:
+  recall_top_k: 5
+skill_bindings:
+  - name: prd_skeleton
+    callable: skills.product_tools.stubs.prd_skeleton_stub
+  - name: mvp_slice
+    callable: skills.product_tools.stubs.mvp_slice_stub
+  - name: roadmap
+    callable: skills.product_tools.stubs.roadmap_stub
+harness_instructions: |
+  MVP must be shippable by a small team. Tie roadmap to compliance and competitive constraints from prior JSON.
+  Prefer outcomes over output lists (metrics, risks, decisions).
