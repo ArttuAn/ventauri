@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Not found</h1>
-<p>{{ message }}</p>
-<p><a href="/dashboard/sessions">Back to sessions</a></p>
+<div class="card empty-state" style="margin-top:1rem">
+  <div class="empty-state-icon" aria-hidden="true">?</div>
+  <h1 class="page-title" style="font-size:1.5rem;margin-bottom:0.5rem">Not found</h1>
+  <p class="muted">{{ message }}</p>
+  <p style="margin-top:1.25rem"><a class="btn" href="/dashboard/sessions">Back to sessions</a></p>
+</div>
 {% endblock %}

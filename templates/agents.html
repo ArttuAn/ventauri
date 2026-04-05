@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Agents</h1>
-<p class="lead">Each agent produces structured reports. Active agents run in pipelines; planned agents are on the roadmap.</p>
+<header class="page-header">
+  <span class="eyebrow">Capabilities</span>
+  <h1 class="page-title">Agents</h1>
+  <p class="lead">Each agent has its own harness: rules, skills, and session-scoped memory. Active agents run inside pipelines; others are on the roadmap.</p>
+</header>
 
 <div class="grid agents-grid">
   {% for a in agents %}
@@ -11,23 +14,25 @@
       <h2>{{ a.title }}</h2>
       <span class="badge {{ a.status }}">{{ a.status }}</span>
     </div>
-    <p>{{ a.description }}</p>
+    <p class="muted" style="margin:0;font-size:0.95rem;line-height:1.55">{{ a.description }}</p>
     {% if a.pipelines %}
-    <p class="small muted">Pipelines: {% for p in a.pipelines %}<code>{{ p }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+    <p class="small muted" style="margin-top:0.85rem">Pipelines {% for p in a.pipelines %}<code>{{ p }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
     {% else %}
-    <p class="small muted">Not yet wired to a pipeline.</p>
+    <p class="small muted" style="margin-top:0.85rem">Not wired to a pipeline yet.</p>
     {% endif %}
-    <p class="small muted harness-path">Harness: <code>{{ a.harness }}</code> (YAML + rules + skills)</p>
+    <p class="small muted harness-path" style="margin-bottom:0"><code>{{ a.harness }}</code></p>
   </article>
   {% endfor %}
 </div>
 
 <section class="section card">
-  <h2>Run agents together</h2>
-  <p>Workflows chain multiple agents (e.g. <strong>Idea → Research → Strategy</strong>). Use <a href="/dashboard/run">Run workflow</a>.</p>
-  <ul class="muted small">
+  <span class="eyebrow">Orchestration</span>
+  <h2 style="margin-top:0.35rem">Chain agents with workflows</h2>
+  <p class="muted" style="margin-bottom:1rem">Example: <strong>Idea → Research → Strategy</strong>, or the full <strong>venture-intelligence</strong> pipeline.</p>
+  <a class="btn primary" href="/dashboard/run">Run workflow</a>
+  <ul class="muted small" style="margin:1.25rem 0 0;padding-left:1.2rem;line-height:1.7">
     {% for pid, stages in pipelines.items() %}
-    <li><code>{{ pid }}</code>: {{ stages | join(" → ") }}</li>
+    <li><code>{{ pid }}</code> — {{ stages | join(" → ") }}</li>
     {% endfor %}
   </ul>
 </section>

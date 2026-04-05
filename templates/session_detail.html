@@ -2,7 +2,11 @@
 {% block content %}
 <p class="back"><a href="/dashboard/sessions">&larr; All sessions</a></p>
 
-<h1>Workflow session</h1>
+<header class="page-header">
+  <span class="eyebrow">Session</span>
+  <h1 class="page-title">Workflow report</h1>
+</header>
+
 <p class="goal-text">{{ session.user_goal }}</p>
 
 <div class="meta card">
@@ -15,7 +19,7 @@
 <h2>Agent reports</h2>
 {% set reps = session.reports | sort(attribute='position') %}
 {% for r in reps %}
-<section class="report card" id="report-{{ r.id }}">
+<section class="card report" id="report-{{ r.id }}">
   <header class="report-head">
     <span class="agent-icon">{{ r.agent_name | upper }}</span>
     <h3>{{ r.stage }} - {{ r.agent_name }}</h3>
@@ -33,9 +37,9 @@
 <div class="card">
   <ol class="timeline">
     {% for ev in session.history_json %}
-    <li><code>{{ ev.kind }}</code> {% if ev.at %}<span class="muted small">{{ ev.at }}</span>{% endif %}
-      {% if ev.stage %} — stage <strong>{{ ev.stage }}</strong>{% endif %}
-      {% if ev.agent %} — <strong>{{ ev.agent }}</strong>{% endif %}
+    <li><code>{{ ev.kind }}</code>{% if ev.at %} <span class="muted small">{{ ev.at }}</span>{% endif %}
+      {% if ev.stage %} - stage <strong>{{ ev.stage }}</strong>{% endif %}
+      {% if ev.agent %} - <strong>{{ ev.agent }}</strong>{% endif %}
     </li>
     {% endfor %}
   </ol>

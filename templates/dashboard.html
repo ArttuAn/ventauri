@@ -1,57 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Dashboard</h1>
-<p class="lead">Manage AI agents that support your venture: run workflows, review agent reports, and browse history.</p>
+<header class="page-header">
+  <span class="eyebrow">Mission control</span>
+  <h1 class="page-title">Dashboard</h1>
+  <p class="lead">Orchestrate AI agents for your venture: run workflows, read reports, and watch the live technical trace.</p>
+</header>
 
 <div class="stats">
-  <div class="stat card">
+  <div class="stat card stat-tile">
+    <span class="stat-icon" aria-hidden="true">◇</span>
     <span class="stat-value">{{ session_count }}</span>
-    <span class="stat-label">Workflow runs stored</span>
+    <span class="stat-label">Workflow runs in SQLite</span>
   </div>
-  <div class="stat card">
+  <div class="stat card stat-tile">
+    <span class="stat-icon" aria-hidden="true">◈</span>
     <span class="stat-value">{{ report_count }}</span>
-    <span class="stat-label">Agent reports</span>
+    <span class="stat-label">Agent reports saved</span>
   </div>
-  <div class="stat card">
+  <div class="stat card stat-tile">
+    <span class="stat-icon" aria-hidden="true">⎘</span>
     <span class="stat-value">{{ pipelines | length }}</span>
-    <span class="stat-label">Pipelines</span>
+    <span class="stat-label">Registered pipelines</span>
   </div>
 </div>
 
 <div class="actions">
   <a class="btn primary" href="/dashboard/run">Start a workflow</a>
   <a class="btn" href="/dashboard/agents">Browse agents</a>
+  <a class="btn" href="/dashboard/sessions">All sessions</a>
 </div>
 
 <section class="section card activity-section">
   <div class="activity-head">
     <h2>System activity log</h2>
-    <span class="muted small" id="activity-status">Live · polling</span>
+    <div class="activity-meta">
+      <span class="activity-pill">Live</span>
+      <span class="muted small" id="activity-detail">Connecting…</span>
+    </div>
   </div>
-  <p class="muted small">Technical trace: pipeline stages, harness skills, SQLite, and LLM HTTP (when enabled). Max ~2000 events in memory.</p>
+  <p class="muted small" style="margin-top:0">Pipeline stages, harness skills, SQLite writes, and LLM HTTP calls (when enabled). Ring buffer ~2000 events.</p>
   <pre class="activity-log" id="activity-log" aria-live="polite"></pre>
 </section>
 
 <section class="section">
   <h2>Recent runs</h2>
   {% if recent %}
-  <ul class="list">
-    {% for s in recent %}
-    <li>
-      <a href="/dashboard/sessions/{{ s.id }}">{{ s.user_goal[:100] }}{% if s.user_goal|length > 100 %}…{% endif %}</a>
-      <span class="muted small">{{ s.pipeline_id }} · {{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "" }}</span>
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="card" style="padding:0;overflow:hidden;margin-top:0.75rem">
+    <ul class="list" style="margin:0">
+      {% for s in recent %}
+      <li style="padding:1rem 1.25rem">
+        <a href="/dashboard/sessions/{{ s.id }}">{{ s.user_goal[:100] }}{% if s.user_goal|length > 100 %}…{% endif %}</a>
+        <span class="muted small">{{ s.pipeline_id }} · {{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
   {% else %}
-  <p class="muted">No runs yet. <a href="/dashboard/run">Run your first workflow</a>.</p>
+  <div class="card empty-state" style="margin-top:0.75rem">
+    <div class="empty-state-icon" aria-hidden="true">◇</div>
+    <p>No runs yet. <a href="/dashboard/run">Launch your first workflow</a>.</p>
+  </div>
   {% endif %}
 </section>
 
 <script>
 (function () {
   const el = document.getElementById("activity-log");
-  const st = document.getElementById("activity-status");
+  const detail = document.getElementById("activity-detail");
   let lastId = 0;
   const maxLines = 400;
   const lines = [];
@@ -74,7 +89,7 @@
       const res = await fetch("/api/activity?since_id=" + lastId + "&limit=500");
       const data = await res.json();
       if (!data.events || !data.events.length) {
-        st.textContent = "Live · polling (idle)";
+        detail.textContent = "Idle · event #" + lastId;
         return;
       }
       for (var i = 0; i < data.events.length; i++) {
@@ -85,9 +100,9 @@
       while (lines.length > maxLines) lines.shift();
       el.textContent = lines.join("\n");
       el.scrollTop = el.scrollHeight;
-      st.textContent = "Live · last event id " + lastId;
+      detail.textContent = "Streaming · latest #" + lastId;
     } catch (err) {
-      st.textContent = "Poll error";
+      detail.textContent = "Poll error";
     }
   }
   tick();

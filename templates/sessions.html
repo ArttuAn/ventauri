@@ -1,30 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Sessions &amp; reports</h1>
-<p class="lead">Every workflow run is stored locally with per-agent reports.</p>
+<header class="page-header">
+  <span class="eyebrow">History</span>
+  <h1 class="page-title">Sessions &amp; reports</h1>
+  <p class="lead">Every workflow run is persisted locally with per-agent structured output.</p>
+</header>
 
 {% if sessions %}
-<table class="table">
-  <thead>
-    <tr>
-      <th>Goal</th>
-      <th>Pipeline</th>
-      <th>Reports</th>
-      <th>When</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for s in sessions %}
-    <tr>
-      <td><a href="/dashboard/sessions/{{ s.id }}">{{ s.user_goal[:80] }}{% if s.user_goal|length > 80 %}…{% endif %}</a></td>
-      <td><code>{{ s.pipeline_id }}</code></td>
-      <td>{{ s.reports | length }}</td>
-      <td class="muted small">{{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Goal</th>
+        <th>Pipeline</th>
+        <th>Reports</th>
+        <th>When</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td><a href="/dashboard/sessions/{{ s.id }}">{{ s.user_goal[:80] }}{% if s.user_goal|length > 80 %}…{% endif %}</a></td>
+        <td><code>{{ s.pipeline_id }}</code></td>
+        <td>{{ s.reports | length }}</td>
+        <td class="muted small">{{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% else %}
-<p class="muted">No sessions yet. <a href="/dashboard/run">Run a workflow</a>.</p>
+<div class="card empty-state">
+  <div class="empty-state-icon" aria-hidden="true">◇</div>
+  <p>No sessions yet. <a href="/dashboard/run">Run a workflow</a> to create one.</p>
+</div>
 {% endif %}
 {% endblock %}

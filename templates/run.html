@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Run workflow</h1>
-<p class="lead">Describe what you are building or exploring. Agents run in the background so you can watch the technical activity log update in real time.</p>
+<header class="page-header">
+  <span class="eyebrow">Execute</span>
+  <h1 class="page-title">Run workflow</h1>
+  <p class="lead">Describe your goal. Agents run in the background while the execution log streams here, then you jump to the saved session.</p>
+</header>
 
 <form id="run-form" class="card form-card">
   <label for="goal">Your goal</label>
@@ -23,13 +26,16 @@
 
 <section class="card activity-section" id="run-log-section" hidden>
   <div class="activity-head">
-    <h2>Execution log (this run)</h2>
-    <span class="muted small" id="run-job-meta"></span>
+    <h2>Execution log</h2>
+    <div class="activity-meta">
+      <span class="activity-pill">Live</span>
+      <span class="muted small" id="run-job-meta"></span>
+    </div>
   </div>
   <pre class="activity-log" id="live-log" aria-live="polite"></pre>
 </section>
 
-<p class="muted small">Uses <code>POST /api/run/async</code> + job polling. Sync API remains <code>POST /api/run</code> for scripts.</p>
+<p class="muted small">Web UI uses <code>POST /api/run/async</code>. Scripts can call <code>POST /api/run</code> synchronously.</p>
 
 <script>
 (function () {
