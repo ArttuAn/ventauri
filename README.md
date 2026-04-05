@@ -1,5 +1,7 @@
 # Ventauri
 
+**Repository:** [github.com/ArttuAn/ventauri](https://github.com/ArttuAn/ventauri)
+
 **Multi-agent AI operating system for entrepreneurs** — a modular framework of AI agents that collaborate from idea discovery → validation → launch → growth.
 
 This repository is a **framework and reference implementation**, not a single chatbot: shared memory, pluggable skills, orchestration, and workflows you can extend.
