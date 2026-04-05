@@ -37,6 +37,7 @@ async def dashboard_home(
     n_rep = await count_reports(db)
     recent = await list_recent_sessions(db, limit=8)
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
             "request": request,
@@ -52,6 +53,7 @@ async def dashboard_home(
 @router.get("/dashboard/agents", response_class=HTMLResponse)
 async def dashboard_agents(request: Request) -> Any:
     return templates.TemplateResponse(
+        request,
         "agents.html",
         {
             "request": request,
@@ -65,6 +67,7 @@ async def dashboard_agents(request: Request) -> Any:
 @router.get("/dashboard/run", response_class=HTMLResponse)
 async def dashboard_run_get(request: Request) -> Any:
     return templates.TemplateResponse(
+        request,
         "run.html",
         {
             "request": request,
@@ -81,6 +84,7 @@ async def dashboard_sessions(
 ) -> Any:
     rows = await list_recent_sessions(db, limit=100)
     return templates.TemplateResponse(
+        request,
         "sessions.html",
         {
             "request": request,
@@ -99,6 +103,7 @@ async def dashboard_session_detail(
     row = await get_session_by_id(db, session_id)
     if row is None:
         return templates.TemplateResponse(
+            request,
             "not_found.html",
             {
                 "request": request,
@@ -108,6 +113,7 @@ async def dashboard_session_detail(
             status_code=404,
         )
     return templates.TemplateResponse(
+        request,
         "session_detail.html",
         {
             "request": request,
