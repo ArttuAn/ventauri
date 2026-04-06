@@ -22,6 +22,17 @@ StageFn = Callable[
     Awaitable[AgentOutput],
 ]
 
+# Single-agent chat: specialist id → runner (same signatures as pipeline stages).
+CHAT_AGENT_RUNNERS: dict[str, StageFn] = {
+    "idea": run_idea_agent,
+    "research": run_research_agent,
+    "strategy": run_strategy_agent,
+    "compliance": run_compliance_agent,
+    "market_research": run_market_research_agent,
+    "competitor_analysis": run_competitor_analysis_agent,
+    "product_development": run_product_development_agent,
+}
+
 _REGISTRY: dict[str, list[tuple[str, StageFn]]] = {
     "idea-to-strategy": [
         ("idea", run_idea_agent),
@@ -130,6 +141,7 @@ class PipelineRunner:
 # Export stage IDs for docs / CLI
 PIPELINE_STAGE_IDS = {k: [s for s, _ in v] for k, v in _REGISTRY.items()}
 __all__ = [
+    "CHAT_AGENT_RUNNERS",
     "PipelineRunner",
     "PIPELINE_STAGE_IDS",
     "IDEA_TO_STRATEGY_STAGES",

@@ -1,5 +1,5 @@
 agent_id: competitor_analysis
-display_title: Competitor analysis
+display_title: Competitor Analysis Agent
 prompt_name: competitor_analysis_agent
 rules_file: rules.md
 memory:

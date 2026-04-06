@@ -6,6 +6,56 @@
   <p class="lead">Orchestrate AI agents for your venture: run workflows, read reports, and watch the live technical trace.</p>
 </header>
 
+<script type="application/json" id="ventauri-endpoints">{{ chat_endpoints_json | safe }}</script>
+<section class="section card chat-section" aria-labelledby="chat-heading">
+  <div class="chat-section-head">
+    <h2 class="page-title" id="chat-heading" style="font-size:1.15rem;margin:0 0 0.35rem">Founder chat</h2>
+    <p class="muted small" style="margin:0">One message → we <strong>pick one specialist</strong> (keywords offline by default; set <code>OPENAI_API_KEY</code> for a model router). Below you’ll see <strong>what we matched</strong> in your text, a short <strong>why this agent</strong> line, then that agent’s answer.</p>
+  </div>
+  <div class="chat-composer">
+    <label class="sr-only" for="chat-input">Message to route</label>
+    <textarea id="chat-input" class="chat-input" rows="3" placeholder="Example: Draft a GDPR diligence checklist for our B2B SaaS before enterprise pilots…"></textarea>
+    <div class="chat-toolbar">
+      <span class="muted small" id="chat-status" aria-live="polite"></span>
+      <button type="button" class="btn primary" id="chat-send">Send</button>
+    </div>
+  </div>
+  <div id="chat-alert" class="chat-alert" role="alert" hidden></div>
+  <div id="chat-output" class="chat-output" hidden>
+    <div class="chat-panel router-panel">
+      <h3 class="chat-panel-title">Routing decision</h3>
+      <div class="router-routed-callout" role="status" aria-live="polite">
+        <div class="router-routed-prefix">Your message was routed to</div>
+        <div class="router-routed-name-row">
+          <span class="router-routed-title" id="router-routed-title">—</span>
+          <code class="router-routed-id" id="router-routed-id"></code>
+        </div>
+      </div>
+      <p class="router-meta muted small">
+        <span id="router-confidence"></span>
+        <span aria-hidden="true"> · </span>
+        <span id="router-source"></span>
+      </p>
+      <p class="router-subhead muted small">Why this agent</p>
+      <p class="router-reasoning" id="router-reasoning"></p>
+      <p class="router-subhead muted small">What we noticed in your message</p>
+      <ul class="evidence-list" id="router-evidence"></ul>
+    </div>
+    <div class="chat-panel agent-panel">
+      <h3 class="chat-panel-title" id="agent-panel-title">Answer</h3>
+      <p class="agent-summary" id="agent-summary"></p>
+      <details class="chat-details">
+        <summary>Structured output (JSON)</summary>
+        <pre class="chat-json" id="agent-structured"></pre>
+      </details>
+      <details class="chat-details">
+        <summary>Raw model output</summary>
+        <pre class="chat-json chat-json-raw" id="agent-raw"></pre>
+      </details>
+    </div>
+  </div>
+</section>
+
 <div class="stats">
   <div class="stat card stat-tile">
     <span class="stat-icon" aria-hidden="true">◇</span>
@@ -64,6 +114,123 @@
 </section>
 
 <script>
+(function () {
+  var input = document.getElementById("chat-input");
+  var send = document.getElementById("chat-send");
+  var statusEl = document.getElementById("chat-status");
+  var alertEl = document.getElementById("chat-alert");
+  var out = document.getElementById("chat-output");
+  if (input && send) {
+    var chatPostPath = "/api/chat";
+    var ep = document.getElementById("ventauri-endpoints");
+    if (ep && ep.textContent) {
+      try {
+        var cfg = JSON.parse(ep.textContent);
+        if (cfg && typeof cfg.chat_post_path === "string" && cfg.chat_post_path.charAt(0) === "/") {
+          chatPostPath = cfg.chat_post_path;
+        }
+      } catch (x) {}
+    }
+    function sourceLabel(s) {
+      if (s === "model") return "OpenAI model router";
+      if (s === "model_fallback") return "Model invalid pick → keywords";
+      if (s === "llm") return "OpenAI model router";
+      if (s === "llm_fallback") return "Model invalid pick → keywords";
+      return "Keyword router (offline)";
+    }
+    function setAlert(msg) {
+      if (!msg) {
+        alertEl.hidden = true;
+        alertEl.textContent = "";
+        return;
+      }
+      alertEl.hidden = false;
+      alertEl.textContent = msg;
+    }
+    async function sendChat() {
+      var text = (input.value || "").trim();
+      if (!text) {
+        setAlert("Enter a message first.");
+        return;
+      }
+      setAlert("");
+      send.disabled = true;
+      statusEl.textContent = "Routing…";
+      try {
+        var res = await fetch(chatPostPath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          var det = data.detail;
+          if (Array.isArray(det)) {
+            det = det.map(function (x) { return x.msg || JSON.stringify(x); }).join("; ");
+          }
+          if (res.status === 404) {
+            setAlert(
+              (det ? String(det) : "Not Found") +
+                " — chat API missing on this server. Restart uvicorn with the latest code (POST " +
+                chatPostPath +
+                ")."
+            );
+          } else {
+            setAlert(det ? String(det) : "Request failed (" + res.status + ")");
+          }
+          statusEl.textContent = "";
+          send.disabled = false;
+          return;
+        }
+        statusEl.textContent = "Done";
+        out.hidden = false;
+        var r = data.routing || {};
+        var routedTitle = r.agent_title || (r.selected_agent_id || "unknown").replace(/_/g, " ") + " Agent";
+        document.getElementById("router-routed-title").textContent = routedTitle;
+        document.getElementById("router-routed-id").textContent = r.selected_agent_id || "";
+        var conf = typeof r.confidence === "number" ? r.confidence : 0;
+        document.getElementById("router-confidence").textContent =
+          "Confidence " + Math.round(conf * 100) + "%";
+        document.getElementById("router-source").textContent = sourceLabel(r.source || "");
+        document.getElementById("router-reasoning").textContent = r.reasoning || "";
+        var ul = document.getElementById("router-evidence");
+        ul.innerHTML = "";
+        (r.evidence || []).forEach(function (line) {
+          var li = document.createElement("li");
+          li.textContent = line;
+          ul.appendChild(li);
+        });
+        var ao = data.agent_output || {};
+        var answerAgent =
+          ao.agent_display_title ||
+          routedTitle ||
+          ((ao.agent_name || "unknown").replace(/_/g, " ") + " Agent");
+        document.getElementById("agent-panel-title").textContent = "Answer from " + answerAgent;
+        document.getElementById("agent-summary").textContent = ao.summary || "";
+        document.getElementById("agent-structured").textContent = JSON.stringify(
+          ao.structured || {},
+          null,
+          2
+        );
+        var raw = ao.raw_text || "";
+        if (ao.raw_truncated) raw += "\n\n[truncated for API]";
+        document.getElementById("agent-raw").textContent = raw;
+      } catch (e) {
+        var hint = e && e.message ? e.message : String(e);
+        setAlert("Request failed (" + hint + "). Check that the API is running and use the same host you opened the dashboard on (e.g. only localhost or only 127.0.0.1).");
+        statusEl.textContent = "";
+      }
+      send.disabled = false;
+    }
+    send.addEventListener("click", sendChat);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+  }
+})();
 (function () {
   const el = document.getElementById("activity-log");
   const detail = document.getElementById("activity-detail");

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -39,6 +41,16 @@ async def dashboard_home(
     n_sess = await count_sessions(db)
     n_rep = await count_reports(db)
     recent = await list_recent_sessions(db, limit=8)
+    chat_ref = request.url_for("ventauri_api_chat")
+    chat_path = (
+        chat_ref.path if hasattr(chat_ref, "path") else urlparse(str(chat_ref)).path
+    )
+    if not str(chat_path).startswith("/"):
+        chat_path = "/" + str(chat_path)
+    chat_cfg = json.dumps(
+        {"chat_post_path": str(chat_path)},
+        ensure_ascii=False,
+    )
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -49,6 +61,7 @@ async def dashboard_home(
             "report_count": n_rep,
             "recent": recent,
             "pipelines": PIPELINE_STAGE_IDS,
+            "chat_endpoints_json": chat_cfg,
         },
     )
 

@@ -800,3 +800,222 @@ html[data-theme="light"] .btn.primary {
   margin-bottom: 0.75rem;
   opacity: 0.5;
 }
+
+/* —— Founder chat (dashboard) —— */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.chat-section {
+  margin-bottom: 1.75rem;
+  padding: 1.25rem 1.35rem;
+}
+
+.chat-section-head {
+  margin-bottom: 1rem;
+}
+
+.chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.chat-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 5.5rem;
+  padding: 0.75rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border-strong));
+  box-shadow: var(--shadow-sm), 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.chat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.chat-alert {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface-solid));
+  border: 1px solid color-mix(in oklab, var(--danger) 28%, transparent);
+}
+
+.chat-output {
+  margin-top: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-panel {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface-solid) 92%, transparent);
+}
+
+.router-panel {
+  border-left: 3px solid color-mix(in oklab, var(--accent-2) 65%, var(--border-strong));
+}
+
+.router-routed-callout {
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--accent-2) 10%, var(--surface-solid));
+  border: 1px solid color-mix(in oklab, var(--accent-2) 22%, var(--border-strong));
+}
+
+.router-routed-prefix {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.router-routed-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+}
+
+.router-routed-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--fg);
+  line-height: 1.25;
+}
+
+.router-routed-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--fg) 6%, var(--surface-solid));
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+}
+
+.agent-panel {
+  border-left: 3px solid color-mix(in oklab, var(--accent) 65%, var(--border-strong));
+}
+
+.chat-panel-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.router-meta {
+  margin: 0 0 0.65rem;
+}
+.router-subhead {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-dim);
+}
+.router-panel .router-reasoning {
+  margin-top: 0;
+}
+
+.router-reasoning {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: color-mix(in oklab, var(--fg) 92%, var(--muted));
+}
+
+.evidence-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.evidence-list li {
+  margin-bottom: 0.35rem;
+}
+
+.agent-summary {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.chat-details {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.chat-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0.35rem 0;
+}
+
+.chat-details summary:hover {
+  color: color-mix(in oklab, var(--accent) 80%, var(--fg));
+}
+
+.chat-json {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  max-height: 18rem;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--activity-log-fg);
+  background: var(--activity-log-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-json-raw {
+  max-height: 14rem;
+}

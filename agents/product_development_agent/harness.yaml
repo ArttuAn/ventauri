@@ -1,5 +1,5 @@
 agent_id: product_development
-display_title: Product development
+display_title: Product Development Agent
 prompt_name: product_development_agent
 rules_file: rules.md
 memory:

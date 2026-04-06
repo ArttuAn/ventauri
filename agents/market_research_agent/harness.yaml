@@ -1,5 +1,5 @@
 agent_id: market_research
-display_title: Market research
+display_title: Market Research Agent
 prompt_name: market_research_agent
 rules_file: rules.md
 memory:

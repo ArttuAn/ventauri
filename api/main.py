@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any
-
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.database import get_db, init_db
 from api.paths import STATIC_DIR
 from api.routers import web as web_router
-from api.schemas import RunRequest, RunResponse
+from api.chat_service import run_routed_chat_turn
+from api.schemas import ChatRequest, ChatResponse, RunRequest, RunResponse
 from api.run_service import run_venture_workflow
+from orchestrator.telemetry import log_event
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
@@ -51,6 +51,21 @@ def health() -> dict[str, str]:
 @app.get("/pipelines")
 def pipelines() -> dict[str, list[str]]:
     return PIPELINE_STAGE_IDS
+
+
+@app.post("/api/chat", response_model=ChatResponse, name="ventauri_api_chat")
+async def api_chat(req: ChatRequest, request: Request) -> ChatResponse:
+    try:
+        payload = await run_routed_chat_turn(req.message, request.app.state.runner)
+        return ChatResponse(**payload)
+    except Exception as e:
+        log_event(
+            "api",
+            "chat_failed",
+            level="error",
+            detail={"exc_type": type(e).__name__, "error": str(e)[:2000]},
+        )
+        raise HTTPException(status_code=500, detail="Chat turn failed. Check logs / activity.") from e
 
 
 @app.post("/run", response_model=RunResponse)

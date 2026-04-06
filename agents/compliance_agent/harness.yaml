@@ -1,5 +1,5 @@
 agent_id: compliance
-display_title: Law & regulation compliance
+display_title: Compliance Agent
 prompt_name: compliance_agent
 rules_file: rules.md
 memory:
