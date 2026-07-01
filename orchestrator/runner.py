@@ -54,7 +54,10 @@ class PipelineRunner:
         self.vectors = vectors
 
     def stages_for(self, pipeline_id: str) -> list[tuple[str, StageFn]]:
-        return _REGISTRY.get(pipeline_id) or _REGISTRY["idea-to-strategy"]
+        if pipeline_id not in _REGISTRY:
+            known = ", ".join(sorted(_REGISTRY))
+            raise ValueError(f"Unknown pipeline {pipeline_id!r}. Valid: {known}")
+        return _REGISTRY[pipeline_id]
 
     async def run_pipeline(self, state: WorkflowState, pipeline_id: str) -> list[AgentOutput]:
         state.pipeline_id = pipeline_id

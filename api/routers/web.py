@@ -154,14 +154,17 @@ async def api_run(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> RunResponse:
-    payload = await run_venture_workflow(
-        goal=req.goal,
-        pipeline=req.pipeline,
-        runner=_runner(request),
-        memory_sessions=_memory_sessions(request),
-        db=db,
-    )
-    return RunResponse(**payload)
+    try:
+        payload = await run_venture_workflow(
+            goal=req.goal,
+            pipeline=req.pipeline,
+            runner=_runner(request),
+            memory_sessions=_memory_sessions(request),
+            db=db,
+        )
+        return RunResponse(**payload)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/api/activity")

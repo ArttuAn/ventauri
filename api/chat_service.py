@@ -27,8 +27,7 @@ async def run_routed_chat_turn(message: str, runner: PipelineRunner) -> dict[str
     async with telemetry_scope(stage=routing.selected_agent_id):
         out = await fn(state, runner.sessions, runner.vectors, {})
 
-    info = get_agent(routing.selected_agent_id)
-    agent_title = info.title if info else routing.selected_agent_id.replace("_", " ").title()
+    agent_title = display_agent_title(routing.selected_agent_id)
 
     raw = out.raw_text or ""
     truncated = len(raw) > RAW_TEXT_MAX

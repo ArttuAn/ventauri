@@ -433,6 +433,13 @@ html[data-theme="light"] .btn.primary {
   filter: brightness(1.05);
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
 .btn.danger {
   border-color: color-mix(in oklab, var(--danger) 35%, var(--border));
   color: var(--danger);
@@ -588,7 +595,7 @@ html[data-theme="light"] .btn.primary {
 .table-wrap {
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: var(--shadow-sm);
   background: var(--surface);
 }
@@ -1018,4 +1025,42 @@ html[data-theme="light"] .btn.primary {
 
 .chat-json-raw {
   max-height: 14rem;
+}
+
+@media (max-width: 720px) {
+  .top {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+  }
+  .top-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .chat-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .chat-hint {
+    order: -1;
+    text-align: right;
+  }
+  .router-routed-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .activity-pill::before {
+    animation: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
 }

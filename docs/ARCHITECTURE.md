@@ -33,7 +33,7 @@ Specialized agents coordinated by an **orchestrator**, backed by:
 | Growth | Funnels, A/B tests, retention |
 | Ops | Hiring, processes, tool stack |
 
-**MVP ships with Idea, Research, Strategy.** Other directories may contain stubs or READMEs until implemented.
+**Shipped in this repo:** harnessed **Compliance**, **Market Research**, **Competitor Analysis**, and **Product Development** agents (`venture-intelligence` pipeline), plus **Idea**, **Research**, and **Strategy** (`idea-to-strategy`). **Founder chat** routes a single message to one specialist via `orchestrator/chat_router.py`. Other agent directories may contain stubs until implemented.
 
 ### 3. Memory
 

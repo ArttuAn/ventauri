@@ -6,10 +6,10 @@ from typing import Optional
 
 import typer
 
+from api.run_service import resolve_pipeline
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.models import WorkflowState
-from orchestrator.router import route_user_goal
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
 from skills.branding_tools.naming import generate_name_candidates
 
@@ -34,9 +34,11 @@ def run_cmd(
         vectors = VectorStore()
         runner = PipelineRunner(sessions, vectors)
 
-        decision = route_user_goal(goal) if not pipeline else None
-        pipeline_id = pipeline or (decision.pipeline_id if decision else "idea-to-strategy")
-        reason = decision.reason if decision else "explicit --pipeline"
+        try:
+            pipeline_id, reason = resolve_pipeline(goal, pipeline)
+        except ValueError as e:
+            typer.secho(str(e), fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1) from e
 
         state = WorkflowState(user_goal=goal)
         outputs = await runner.run_pipeline(state, pipeline_id)

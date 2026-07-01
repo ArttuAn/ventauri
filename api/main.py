@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.database import get_db, init_db
+from api.database import async_session_maker, get_db, init_db
 from api.paths import STATIC_DIR
 from api.routers import web as web_router
 from api.chat_service import run_routed_chat_turn
@@ -16,6 +17,7 @@ from orchestrator.telemetry import log_event
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
+from orchestrator.settings import get_settings
 
 
 @asynccontextmanager
@@ -44,8 +46,22 @@ async def root() -> RedirectResponse:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, str]:
+    db_status = "error"
+    try:
+        async with async_session_maker() as session:
+            await session.execute(text("SELECT 1"))
+            db_status = "ok"
+    except Exception:
+        pass
+    settings = get_settings()
+    overall = "ok" if db_status == "ok" else "degraded"
+    return {
+        "status": overall,
+        "version": app.version,
+        "db": db_status,
+        "llm": "enabled" if settings.llm_enabled else "demo",
+    }
 
 
 @app.get("/pipelines")
@@ -74,11 +90,14 @@ async def run_pipeline_json(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> RunResponse:
-    payload = await run_venture_workflow(
-        goal=req.goal,
-        pipeline=req.pipeline,
-        runner=request.app.state.runner,
-        memory_sessions=request.app.state.memory_sessions,
-        db=db,
-    )
-    return RunResponse(**payload)
+    try:
+        payload = await run_venture_workflow(
+            goal=req.goal,
+            pipeline=req.pipeline,
+            runner=request.app.state.runner,
+            memory_sessions=request.app.state.memory_sessions,
+            db=db,
+        )
+        return RunResponse(**payload)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e

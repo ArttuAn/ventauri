@@ -1,4 +1,5 @@
-import pytest
+import asyncio
+from pathlib import Path
 
 from agents.harness.loader import load_harness_spec
 from memory.session_store import SessionStore
@@ -6,7 +7,6 @@ from memory.vector_store import VectorStore
 from orchestrator.models import WorkflowState
 from orchestrator.router import route_user_goal
 from orchestrator.runner import PipelineRunner
-from pathlib import Path
 
 
 def test_route_venture_intelligence_for_compliance_keywords() -> None:
@@ -14,13 +14,15 @@ def test_route_venture_intelligence_for_compliance_keywords() -> None:
     assert r.pipeline_id == "venture-intelligence"
 
 
-@pytest.mark.asyncio
-async def test_venture_intelligence_pipeline_four_agents() -> None:
-    runner = PipelineRunner(SessionStore(), VectorStore())
-    state = WorkflowState(user_goal="B2B analytics with HIPAA and competitor benchmarking")
-    outs = await runner.run_pipeline(state, "venture-intelligence")
-    names = [o.agent_name for o in outs]
-    assert names == ["compliance", "market_research", "competitor_analysis", "product_development"]
+def test_venture_intelligence_pipeline_four_agents() -> None:
+    async def _run() -> None:
+        runner = PipelineRunner(SessionStore(), VectorStore())
+        state = WorkflowState(user_goal="B2B analytics with HIPAA and competitor benchmarking")
+        outs = await runner.run_pipeline(state, "venture-intelligence")
+        names = [o.agent_name for o in outs]
+        assert names == ["compliance", "market_research", "competitor_analysis", "product_development"]
+
+    asyncio.run(_run())
 
 
 def test_load_compliance_harness_spec() -> None:
