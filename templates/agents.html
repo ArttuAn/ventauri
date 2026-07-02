@@ -14,25 +14,33 @@
       <h2>{{ a.title }}</h2>
       <span class="badge {{ a.status }}">{{ a.status }}</span>
     </div>
-    <p class="muted" style="margin:0;font-size:0.95rem;line-height:1.55">{{ a.description }}</p>
+    <p class="agent-desc muted">{{ a.description }}</p>
     {% if a.pipelines %}
-    <p class="small muted" style="margin-top:0.85rem">Pipelines {% for p in a.pipelines %}<code>{{ p }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+    <p class="small muted agent-pipelines">Pipelines {% for p in a.pipelines %}<code>{{ p }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
     {% else %}
-    <p class="small muted" style="margin-top:0.85rem">Not wired to a pipeline yet.</p>
+    <p class="small muted agent-pipelines">Not wired to a pipeline yet.</p>
     {% endif %}
-    <p class="small muted harness-path" style="margin-bottom:0"><code>{{ a.harness }}</code></p>
+    <p class="small muted harness-path"><code>{{ a.harness }}</code></p>
+    {% if a.status == "active" %}
+    <div class="agent-actions">
+      {% if a.pipelines %}
+      <a class="btn btn-sm" href="/dashboard/run?pipeline={{ a.pipelines[0] | urlencode }}&agent={{ a.id | urlencode }}">Run in pipeline</a>
+      {% endif %}
+      <a class="btn btn-sm" href="/dashboard?agent={{ a.id | urlencode }}">Ask in chat</a>
+    </div>
+    {% endif %}
   </article>
   {% endfor %}
 </div>
 
 <section class="section card">
   <span class="eyebrow">Orchestration</span>
-  <h2 style="margin-top:0.35rem">Chain agents with workflows</h2>
-  <p class="muted" style="margin-bottom:1rem">Example: <strong>Idea → Research → Strategy</strong>, or the full <strong>venture-intelligence</strong> pipeline.</p>
+  <h2 class="section-card-title">Chain agents with workflows</h2>
+  <p class="muted section-card-lead">Example: <strong>Idea Agent → Research Agent → Strategy Agent</strong>, or the full <strong>venture-intelligence</strong> pipeline.</p>
   <a class="btn primary" href="/dashboard/run">Run workflow</a>
-  <ul class="muted small" style="margin:1.25rem 0 0;padding-left:1.2rem;line-height:1.7">
+  <ul class="muted small pipeline-list">
     {% for pid, stages in pipelines.items() %}
-    <li><code>{{ pid }}</code> — {{ stages | join(" → ") }}</li>
+    <li><a href="/dashboard/run?pipeline={{ pid | urlencode }}"><code>{{ pid }}</code></a> — {{ stages | join(" → ") }}</li>
     {% endfor %}
   </ul>
 </section>

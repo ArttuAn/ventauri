@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +40,26 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(web_router.router)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def html_http_exception_handler(request: Request, exc: StarletteHTTPException) -> Response:
+    accept = request.headers.get("accept", "")
+    if exc.status_code == 404 and "text/html" in accept:
+        return web_router.templates.TemplateResponse(
+            request,
+            "not_found.html",
+            {
+                "request": request,
+                "title": "Not found",
+                "message": str(exc.detail) if exc.detail else "Page not found.",
+            },
+            status_code=404,
+        )
+    return JSONResponse(
+        {"detail": exc.detail},
+        status_code=exc.status_code,
+    )
 
 
 @app.get("/", include_in_schema=False)

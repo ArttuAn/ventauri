@@ -27,6 +27,16 @@ def test_api_run_unknown_pipeline_400() -> None:
         assert "Unknown pipeline" in r.json()["detail"]
 
 
+def test_api_run_async_unknown_pipeline_400() -> None:
+    with TestClient(app) as client:
+        r = client.post(
+            "/api/run/async",
+            json={"goal": "test", "pipeline": "not-a-real-pipeline"},
+        )
+        assert r.status_code == 400
+        assert "Unknown pipeline" in r.json()["detail"]
+
+
 def test_api_job_unknown_404() -> None:
     with TestClient(app) as c:
         r = c.get("/api/jobs/00000000-0000-0000-0000-000000000000")

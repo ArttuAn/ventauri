@@ -6,7 +6,8 @@ from typing import Optional
 
 import typer
 
-from api.run_service import resolve_pipeline
+from api.database import async_session_maker, init_db
+from api.run_service import resolve_pipeline, run_venture_workflow
 from memory.session_store import SessionStore
 from memory.vector_store import VectorStore
 from orchestrator.models import WorkflowState
@@ -26,8 +27,13 @@ def run_cmd(
         help="Pipeline id (default: auto-route)",
     ),
     json_out: bool = typer.Option(False, "--json", help="Print machine-readable JSON"),
+    persist: bool = typer.Option(
+        True,
+        "--persist/--no-persist",
+        help="Save workflow + reports to data/ventauri.db (default: persist)",
+    ),
 ) -> None:
-    """Run a pipeline (MVP: idea → research → strategy)."""
+    """Run a pipeline and optionally persist results to SQLite."""
 
     async def _run() -> None:
         sessions = SessionStore()
@@ -35,37 +41,54 @@ def run_cmd(
         runner = PipelineRunner(sessions, vectors)
 
         try:
-            pipeline_id, reason = resolve_pipeline(goal, pipeline)
+            resolve_pipeline(goal, pipeline)
         except ValueError as e:
             typer.secho(str(e), fg=typer.colors.RED, err=True)
             raise typer.Exit(code=1) from e
 
-        state = WorkflowState(user_goal=goal)
-        outputs = await runner.run_pipeline(state, pipeline_id)
+        if persist:
+            await init_db()
+            async with async_session_maker() as db:
+                payload = await run_venture_workflow(
+                    goal=goal,
+                    pipeline=pipeline,
+                    runner=runner,
+                    memory_sessions=sessions,
+                    db=db,
+                )
+                await db.commit()
+        else:
+            pipeline_id, reason = resolve_pipeline(goal, pipeline)
+            state = WorkflowState(user_goal=goal)
+            outputs = await runner.run_pipeline(state, pipeline_id)
+            payload = {
+                "session_id": state.session_id,
+                "pipeline_id": pipeline_id,
+                "route_reason": reason,
+                "outputs": [
+                    {
+                        "agent": o.agent_name,
+                        "summary": o.summary,
+                        "structured": o.structured,
+                    }
+                    for o in outputs
+                ],
+            }
 
-        payload = {
-            "session_id": state.session_id,
-            "pipeline_id": pipeline_id,
-            "route_reason": reason,
-            "outputs": [
-                {
-                    "agent": o.agent_name,
-                    "summary": o.summary,
-                    "structured": o.structured,
-                }
-                for o in outputs
-            ],
-        }
         if json_out:
             typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
             return
 
-        typer.echo(f"Session: {state.session_id}")
-        typer.echo(f"Pipeline: {pipeline_id} ({reason})")
+        typer.echo(f"Session: {payload['session_id']}")
+        typer.echo(f"Pipeline: {payload['pipeline_id']} ({payload['route_reason']})")
+        if persist:
+            typer.echo("Saved to data/ventauri.db — view in dashboard → Sessions")
+        else:
+            typer.echo("(not persisted — use default --persist or the web dashboard)")
         typer.echo("")
-        for o in outputs:
-            typer.echo(f"## {o.agent_name.upper()}")
-            typer.echo(o.summary)
+        for o in payload["outputs"]:
+            typer.echo(f"## {o['agent'].upper()}")
+            typer.echo(o["summary"])
             typer.echo("")
 
     asyncio.run(_run())

@@ -10,19 +10,20 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agents.registry import AGENTS
+from agents.registry import AGENTS, display_agent_title
 from api.database import async_session_maker, get_db
 from api.jobs_store import create_job, get_job, update_job
 from api.paths import TEMPLATES_DIR
 from api.repo import count_reports, count_sessions, delete_session, get_session_by_id, list_recent_sessions
 from api.schemas import RunAsyncAccepted, RunRequest, RunResponse
-from api.run_service import run_venture_workflow
+from api.run_service import resolve_pipeline, run_venture_workflow
 from memory.session_store import SessionStore
 from orchestrator.runner import PIPELINE_STAGE_IDS, PipelineRunner
 from orchestrator.telemetry import get_events, log_event
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["agent_title"] = display_agent_title
 
 
 def _runner(request: Request) -> PipelineRunner:
@@ -51,6 +52,7 @@ async def dashboard_home(
         {"chat_post_path": str(chat_path)},
         ensure_ascii=False,
     )
+    agent_hint = request.query_params.get("agent", "")
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -62,6 +64,7 @@ async def dashboard_home(
             "recent": recent,
             "pipelines": PIPELINE_STAGE_IDS,
             "chat_endpoints_json": chat_cfg,
+            "chat_agent_hint": agent_hint,
         },
     )
 
@@ -82,6 +85,7 @@ async def dashboard_agents(request: Request) -> Any:
 
 @router.get("/dashboard/run", response_class=HTMLResponse)
 async def dashboard_run_get(request: Request) -> Any:
+    qp = request.query_params
     return templates.TemplateResponse(
         request,
         "run.html",
@@ -89,6 +93,9 @@ async def dashboard_run_get(request: Request) -> Any:
             "request": request,
             "title": "Run workflow",
             "pipelines": PIPELINE_STAGE_IDS,
+            "pipelines_json": json.dumps(PIPELINE_STAGE_IDS),
+            "prefill_goal": qp.get("goal", ""),
+            "prefill_pipeline": qp.get("pipeline", ""),
         },
     )
 
@@ -141,9 +148,22 @@ async def dashboard_session_detail(
 
 @router.post("/dashboard/sessions/{session_id}/delete")
 async def dashboard_session_delete(
+    request: Request,
     session_id: str,
     db: AsyncSession = Depends(get_db),
-) -> RedirectResponse:
+) -> Any:
+    row = await get_session_by_id(db, session_id)
+    if row is None:
+        return templates.TemplateResponse(
+            request,
+            "not_found.html",
+            {
+                "request": request,
+                "title": "Not found",
+                "message": "That session was already deleted or never existed.",
+            },
+            status_code=404,
+        )
     await delete_session(db, session_id)
     return RedirectResponse(url="/dashboard/sessions", status_code=303)
 
@@ -186,6 +206,11 @@ async def api_job_status(job_id: str) -> dict[str, Any]:
 
 @router.post("/api/run/async", response_model=RunAsyncAccepted)
 async def api_run_async(req: RunRequest, request: Request) -> RunAsyncAccepted:
+    try:
+        resolve_pipeline(req.goal, req.pipeline)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     job_id = create_job()
     runner = _runner(request)
     mem = _memory_sessions(request)

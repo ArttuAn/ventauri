@@ -12,7 +12,7 @@ This repository is a **framework and reference implementation**, not a single ch
 - **Agents**: **Venture intelligence** harnessed agents (**Compliance Agent**, **Market Research Agent**, **Competitor Analysis Agent**, **Product Development Agent**) plus **Idea → Research → Strategy** pipeline; more slots stubbed in-repo
 - **Memory**: session store + lightweight semantic vector store (embeddings optional via OpenAI)
 - **Interfaces**: **Web dashboard** (Jinja2 + local UI), **CLI** (`ventauri`), **FastAPI** + OpenAPI
-- **Storage**: **SQLite** at `data/ventauri.db` (workflow runs, per-agent reports, workflow event log) — **web/API runs persist**; CLI runs are in-memory unless you use the API
+- **Storage**: **SQLite** at `data/ventauri.db` (workflow runs, per-agent reports, workflow event log) — **CLI**, web, and API runs persist by default (`ventauri run --no-persist` skips SQLite)
 - **Founder chat**: dashboard message box → routing agent picks one specialist → evidence, reasoning, and answer on the same page
 - **Theme**: dark / light toggle (saved in `localStorage`)
 - **Naming skill**: `skills/branding_tools` generates candidate product/repo names (heuristic distinctiveness + next-step checks); exposed on the CLI as `ventauri names`
@@ -39,14 +39,15 @@ python -m venv .venv
 pip install -e ".[dev,openai]"   # dev: pytest; openai: real LLM calls
 pip install -e .
 
-# CLI (does not write to SQLite — use dashboard or API for persisted runs)
+# CLI (persists to SQLite by default; use --no-persist for in-memory only)
 ventauri --help
 ventauri run "I want a B2B SaaS for small clinics" --pipeline idea-to-strategy
 ventauri run "HIPAA-compliant CRM: competitors and MVP" --pipeline venture-intelligence
 ventauri names "AI copilot for indie hackers" --count 8
 
 # Web dashboard + API (same server)
-uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+make dev
+# or: uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 # Then open http://127.0.0.1:8000/dashboard
 ```
 

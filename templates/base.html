@@ -21,6 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/app.css" />
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
   <div class="bg-mesh" aria-hidden="true"></div>
@@ -52,10 +53,11 @@
         </svg>
       </button>
       <nav class="nav" aria-label="Main">
-        <a class="nav-link" href="/dashboard">Dashboard</a>
-        <a class="nav-link" href="/dashboard/agents">Agents</a>
-        <a class="nav-link nav-link-accent" href="/dashboard/run">Run</a>
-        <a class="nav-link" href="/dashboard/sessions">Sessions</a>
+        {% set path = request.url.path.rstrip('/') or '/' %}
+        <a class="nav-link{% if path == '/dashboard' %} is-active{% endif %}" href="/dashboard"{% if path == '/dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
+        <a class="nav-link{% if path == '/dashboard/agents' %} is-active{% endif %}" href="/dashboard/agents"{% if path == '/dashboard/agents' %} aria-current="page"{% endif %}>Agents</a>
+        <a class="nav-link nav-link-accent{% if path == '/dashboard/run' %} is-active{% endif %}" href="/dashboard/run"{% if path == '/dashboard/run' %} aria-current="page"{% endif %}>Run</a>
+        <a class="nav-link{% if path == '/dashboard/sessions' or path.startswith('/dashboard/sessions/') %} is-active{% endif %}" href="/dashboard/sessions"{% if path == '/dashboard/sessions' or path.startswith('/dashboard/sessions/') %} aria-current="page"{% endif %}>Sessions</a>
         <a class="nav-link nav-link-muted" href="/docs">API</a>
       </nav>
     </div>

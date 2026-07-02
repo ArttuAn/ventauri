@@ -14,7 +14,7 @@
   </div>
   <div class="chat-composer">
     <label class="sr-only" for="chat-input">Message to route</label>
-    <textarea id="chat-input" class="chat-input" rows="3" placeholder="Example: Draft a GDPR diligence checklist for our B2B SaaS before enterprise pilots…"></textarea>
+    <textarea id="chat-input" class="chat-input" rows="3" placeholder="{% if chat_agent_hint %}Message for the {{ chat_agent_hint | agent_title }}…{% else %}Example: Draft a GDPR diligence checklist for our B2B SaaS before enterprise pilots…{% endif %}"></textarea>
     <div class="chat-toolbar">
       <span class="muted small" id="chat-status" aria-live="polite"></span>
       <span class="muted small chat-hint">Ctrl+Enter to send</span>
@@ -165,20 +165,13 @@
         });
         var data = await res.json().catch(function () { return {}; });
         if (!res.ok) {
-          var det = data.detail;
-          if (Array.isArray(det)) {
-            det = det.map(function (x) { return x.msg || JSON.stringify(x); }).join("; ");
-          }
+          var errMsg = window.Ventauri && Ventauri.apiErrorDetail
+            ? Ventauri.apiErrorDetail(data, "Request failed (" + res.status + ")")
+            : (data.detail ? String(data.detail) : "Request failed (" + res.status + ")");
           if (res.status === 404) {
-            setAlert(
-              (det ? String(det) : "Not Found") +
-                " — chat API missing on this server. Restart uvicorn with the latest code (POST " +
-                chatPostPath +
-                ")."
-            );
-          } else {
-            setAlert(det ? String(det) : "Request failed (" + res.status + ")");
+            errMsg += " — restart uvicorn with latest code (POST " + chatPostPath + ").";
           }
+          setAlert(errMsg);
           statusEl.textContent = "";
           send.disabled = false;
           return;
@@ -238,19 +231,9 @@
   let lastId = 0;
   const maxLines = 400;
   const lines = [];
-
-  function fmt(e) {
-    var det = "";
-    try {
-      if (e.detail && Object.keys(e.detail).length) {
-        det = " | " + JSON.stringify(e.detail);
-      }
-    } catch (x) { det = ""; }
-    var job = e.job_id ? " job=" + e.job_id.slice(0, 8) : "";
-    var sess = e.session_id ? " sess=" + e.session_id.slice(0, 8) : "";
-    var stg = e.stage ? " stage=" + e.stage : "";
-    return "[" + e.id + "] " + e.ts + " " + String(e.level || "info").toUpperCase() + " " + e.source + " | " + e.message + job + sess + stg + det;
-  }
+  const fmt = window.Ventauri && Ventauri.formatActivityEvent
+    ? Ventauri.formatActivityEvent
+    : function (e) { return JSON.stringify(e); };
 
   async function tick() {
     try {
